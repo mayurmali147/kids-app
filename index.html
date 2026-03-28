@@ -81,10 +81,10 @@
 
             <!-- Category Navigation -->
             <div class="flex flex-wrap justify-center gap-2">
-                <button onclick="changeCategory('numbers')" id="btn-numbers"
-                    class="category-btn px-4 py-2 rounded-full bg-blue-100 text-blue-600 font-bold border-2 border-blue-200 active">123</button>
                 <button onclick="changeCategory('alphabet')" id="btn-alphabet"
-                    class="category-btn px-4 py-2 rounded-full bg-pink-100 text-pink-600 font-bold border-2 border-pink-200">ABC</button>
+                    class="category-btn px-4 py-2 rounded-full bg-pink-100 text-pink-600 font-bold border-2 border-pink-200 active">ABC</button>
+                <button onclick="changeCategory('numbers')" id="btn-numbers"
+                    class="category-btn px-4 py-2 rounded-full bg-blue-100 text-blue-600 font-bold border-2 border-blue-200">123</button>
                 <button onclick="changeCategory('fruits')" id="btn-fruits"
                     class="category-btn px-4 py-2 rounded-full bg-green-100 text-green-600 font-bold border-2 border-green-200">🍎
                     Fruits</button>
@@ -153,7 +153,7 @@
             ].map(a => ({ ...a, speech: `This is a ${a.name}` }))
         };
 
-        let currentCategory = 'numbers';
+        let currentCategory = 'alphabet';
         const grid = document.getElementById('grid-container');
 
         function speak(text) {
@@ -162,9 +162,9 @@
 
             // Musical Settings
             utterance.lang = 'en-US';
-            utterance.rate = 0.75; // Much slower for clarity and "sing-song" feel
-            utterance.pitch = 1.4; // Higher pitch sounds like a cartoon/teacher
-            utterance.volume = 1;
+            utterance.rate = 0.70;// 0.65; // Much slower for clarity and "sing-song" feel
+            utterance.pitch = 1.1; // 1.4; // Higher pitch sounds like a cartoon/teacher
+            utterance.volume = 2;
 
             window.speechSynthesis.speak(utterance);
         }
