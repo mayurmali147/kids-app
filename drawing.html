@@ -24,6 +24,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
 
         .huge-btn:active {
@@ -71,7 +72,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 50;
+            z-index: 60;
             background: rgba(255, 250, 240, 0.9);
             display: flex;
             flex-direction: column;
@@ -79,11 +80,40 @@
             justify-content: center;
             cursor: pointer;
         }
+
+        #toolbar {
+            transition: transform 0.3s ease-in-out;
+            scrollbar-width: none;
+        }
+        #toolbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .fullscreen-active #toolbar {
+            transform: translateX(-100%);
+        }
+
+        .fullscreen-active #canvas-container {
+            margin-left: 0 !important;
+        }
+
+        #toggle-fs {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 40;
+            background: white;
+            border: 4px solid #fbd38d; /* orange-200 */
+            transition: all 0.2s;
+        }
+        
+        #toggle-fs:active {
+            transform: scale(0.9);
+        }
     </style>
 </head>
 <body>
 
-<!-- Initial Interaction Overlay to enable Audio context -->
 <div id="interaction-overlay" onclick="enableAudioAndStart()">
     <div class="bg-white p-12 rounded-[3rem] shadow-2xl flex flex-col items-center animate-bounce">
         <span class="text-9xl">🎨</span>
@@ -93,12 +123,26 @@
 
 <div id="app" class="h-screen w-screen flex flex-col relative overflow-hidden">
     
+    <!-- Full Mode Toggle Button (Floating) -->
+    <button id="toggle-fs" onclick="toggleFullscreen()" class="w-16 h-16 rounded-full shadow-xl flex items-center justify-center">
+        <div id="fs-icon-container" class="relative w-8 h-8 flex items-center justify-center">
+            <!-- Maximize Icon (Default) -->
+            <svg id="icon-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full text-orange-500">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+            </svg>
+            <!-- Minimize Icon (Hidden by default) -->
+            <svg id="icon-minimize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full text-red-500 hidden">
+                <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+            </svg>
+        </div>
+    </button>
+
     <!-- Sidebar / Toolbar -->
-    <div id="toolbar" class="absolute top-0 left-0 bottom-0 w-24 md:w-32 bg-white shadow-2xl z-20 flex flex-col items-center py-4 space-y-4 overflow-y-auto border-r-4 border-orange-100">
+    <div id="toolbar" class="absolute top-0 left-0 bottom-0 w-24 md:w-32 bg-white shadow-2xl z-20 flex flex-col items-center py-6 space-y-6 overflow-y-auto border-r-4 border-orange-100">
         <button onclick="setMode('free')" class="huge-btn w-16 h-16 md:w-20 md:h-20 bg-purple-400 rounded-2xl shadow-md" title="Free Paint">
             <span class="text-3xl">🎨</span>
         </button>
-        <div class="w-12 h-1 bg-gray-100 rounded-full"></div>
+        <div class="w-12 h-1 bg-gray-100 rounded-full shrink-0"></div>
         
         <button onclick="setMode('v-line')" class="huge-btn w-16 h-16 md:w-20 md:h-20 bg-blue-400 rounded-2xl shadow-md" title="Standing Line">
             <div class="w-1 h-10 bg-white rounded-full"></div>
@@ -116,15 +160,15 @@
             <span class="text-white text-3xl">▲</span>
         </button>
 
-        <div class="flex-grow"></div>
+        <div class="flex-grow min-h-[20px]"></div>
         
-        <button onclick="clearCanvas()" class="huge-btn w-16 h-16 md:w-20 md:h-20 bg-gray-200 rounded-full shadow-md mt-4">
+        <button onclick="clearCanvas(true)" class="huge-btn w-16 h-16 md:w-20 md:h-20 bg-gray-200 rounded-full shadow-md mb-6">
             <span class="text-3xl">🧹</span>
         </button>
     </div>
 
     <!-- Main Canvas Area -->
-    <div class="flex-1 relative ml-24 md:ml-32">
+    <div id="canvas-container" class="flex-1 relative ml-24 md:ml-32 transition-all duration-300">
         <canvas id="paintCanvas"></canvas>
         <div id="guide-container"></div>
     </div>
@@ -145,16 +189,36 @@
     let lastY = 0;
     let brushColor = '#9400D3';
     let audioEnabled = false;
+    let isFullscreen = false;
     const colors = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'];
 
     window.onload = () => {
         initApp();
     };
 
+    function toggleFullscreen() {
+        isFullscreen = !isFullscreen;
+        const app = document.getElementById('app');
+        const iconMax = document.getElementById('icon-maximize');
+        const iconMin = document.getElementById('icon-minimize');
+        
+        if (isFullscreen) {
+            app.classList.add('fullscreen-active');
+            iconMax.classList.add('hidden');
+            iconMin.classList.remove('hidden');
+        } else {
+            app.classList.remove('fullscreen-active');
+            iconMax.classList.remove('hidden');
+            iconMin.classList.add('hidden');
+        }
+        
+        // Wait for transition then resize canvas
+        setTimeout(resize, 350);
+    }
+
     function enableAudioAndStart() {
         audioEnabled = true;
         document.getElementById('interaction-overlay').style.display = 'none';
-        // No initial voice message per request
     }
 
     function initApp() {
@@ -183,15 +247,33 @@
 
     function resize() {
         const parent = canvas.parentElement;
+        if (!parent || parent.clientWidth === 0 || parent.clientHeight === 0) return;
+
+        let tempCanvas = null;
+        if (canvas.width > 0 && canvas.height > 0) {
+            tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(canvas, 0, 0);
+        }
+
         canvas.width = parent.clientWidth;
         canvas.height = parent.clientHeight;
+        
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.lineWidth = 15;
+        
+        if (tempCanvas) {
+            ctx.drawImage(tempCanvas, 0, 0);
+        }
+        
         if(currentMode !== 'free') setupGuide();
     }
 
     function setMode(mode) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         currentMode = mode;
         brushColor = colors[Math.floor(Math.random() * colors.length)];
         clearGuides();
@@ -202,7 +284,6 @@
         switch(mode) {
             case 'free': 
                 label = "Free hand"; 
-                shouldSpeak = false; // No voice for free hand
                 break;
             case 'v-line': 
                 label = "Standing line"; 
@@ -231,9 +312,7 @@
                 break;
         }
 
-        if (shouldSpeak) {
-            speak(label);
-        }
+        if (shouldSpeak) speak(label);
     }
 
     function clearGuides() {
@@ -312,16 +391,19 @@
         isDrawing = false;
     }
 
-    function clearCanvas() {
-        const vacuum = document.getElementById('vacuum');
-        vacuum.style.display = 'flex';
-        // No voice for cleanup per request
-
-        setTimeout(() => {
+    function clearCanvas(showAnimation = false) {
+        if (showAnimation) {
+            const vacuum = document.getElementById('vacuum');
+            vacuum.style.display = 'flex';
+            setTimeout(() => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                vacuum.style.display = 'none';
+                if(currentMode !== 'free') setupGuide(currentMode === 'v-line' ? 'line-v' : currentMode === 'h-line' ? 'line-h' : currentMode); 
+            }, 1200);
+        } else {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            vacuum.style.display = 'none';
             if(currentMode !== 'free') setupGuide(currentMode === 'v-line' ? 'line-v' : currentMode === 'h-line' ? 'line-h' : currentMode); 
-        }, 1200);
+        }
     }
 
     async function speak(text) {
@@ -331,7 +413,7 @@
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    contents: [{ parts: [{ text: text }] }], // Pure name, no extra instructions
+                    contents: [{ parts: [{ text: text }] }],
                     generationConfig: {
                         responseModalities: ["AUDIO"],
                         speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } }
